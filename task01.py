@@ -186,7 +186,7 @@ parsed_df = df.selectExpr("CAST(value AS STRING) as json_data") \
     .select("data.*")
 
 print("parsed_df")
-parsed_df.printSchema()
+
 
 result_df = parsed_df.join(athlete_bio_df, on='athlete_id', how='inner') \
     .drop(athlete_bio_df.country_noc) \
@@ -194,7 +194,7 @@ result_df = parsed_df.join(athlete_bio_df, on='athlete_id', how='inner') \
     
     
 print("result_df")
-result_df.printSchema()
+
 
 aggregated_df = result_df.groupBy("sport", "medal", "sex", "country_noc") \
     .agg(
@@ -205,9 +205,17 @@ aggregated_df = result_df.groupBy("sport", "medal", "sex", "country_noc") \
 aggregated_df = aggregated_df.withColumn("timestamp", current_timestamp())
 
 print("aggregated_df")
-# print(f"\nОб'єднана таблиця ({aggregated_df.count()} записів):")
-# result_df.show()
-# result_df.printSchema()
+print(f"\nОб'єднана таблиця:")
+
+# Виведення потоку даних у консоль
+query = aggregated_df.writeStream \
+    .outputMode("complete") \
+    .format("console") \
+    .start()
+
+# Очікування завершення запиту
+query.awaitTermination()
+
 
 def foreach_batch_function(batch_df, batch_id):
     print(f"foreach_batch_function started")
@@ -242,11 +250,10 @@ def foreach_batch_function(batch_df, batch_id):
     except Exception as e:
         print(f"Error writing batch {batch_id}: {e}")
 
-# Вивід даних у консоль
-query = aggregated_df \
-    .writeStream \
-    .outputMode("complete") \
-    .foreachBatch(foreach_batch_function) \
-    .start()
+# query = aggregated_df \
+#     .writeStream \
+#     .outputMode("complete") \
+#     .foreachBatch(foreach_batch_function) \
+#     .start()
 
-query.awaitTermination()
+# query.awaitTermination()
